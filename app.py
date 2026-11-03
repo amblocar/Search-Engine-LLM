@@ -35,6 +35,15 @@ api_key = st.sidebar.text_input(
     "Enter Groq API Key",
     type="password"
 )
+selected_model = st.sidebar.selectbox(
+    "Choose Model",
+    [
+        "llama3-8b-8192",
+        "llama3-70b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+    ]
+)
 
 # ------------------------------------------------
 # TOOLS
@@ -115,7 +124,8 @@ if user_prompt:
 
         llm = ChatGroq(
             groq_api_key=api_key,
-            model="llama-3.1-8b-instant"
+            model=selected_model,
+            temperature=0
         )
 
         # ----------------------------------------
