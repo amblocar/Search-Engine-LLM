@@ -1,7 +1,6 @@
 import streamlit as st
 
 from langchain_groq import ChatGroq
-
 from langchain.agents import create_agent
 
 from langchain_community.tools import (
@@ -15,17 +14,20 @@ from langchain_community.utilities import (
     ArxivAPIWrapper,
 )
 
-# ----------------------------------
+# ------------------------------------------------
 # PAGE CONFIG
-# ----------------------------------
+# ------------------------------------------------
 
-st.set_page_config(page_title="LangChain Search Chat")
+st.set_page_config(
+    page_title="LangChain Search Assistant",
+    page_icon="🔎"
+)
 
 st.title("🔎 LangChain Search Assistant")
 
-# ----------------------------------
+# ------------------------------------------------
 # SIDEBAR
-# ----------------------------------
+# ------------------------------------------------
 
 st.sidebar.title("Settings")
 
@@ -34,23 +36,23 @@ api_key = st.sidebar.text_input(
     type="password"
 )
 
-# ----------------------------------
+# ------------------------------------------------
 # TOOLS
-# ----------------------------------
+# ------------------------------------------------
 
 search_tool = DuckDuckGoSearchRun()
 
 wiki_tool = WikipediaQueryRun(
     api_wrapper=WikipediaAPIWrapper(
         top_k_results=1,
-        doc_content_chars_max=500
+        doc_content_chars_max=500,
     )
 )
 
 arxiv_tool = ArxivQueryRun(
     api_wrapper=ArxivAPIWrapper(
         top_k_results=1,
-        doc_content_chars_max=500
+        doc_content_chars_max=500,
     )
 )
 
@@ -60,88 +62,109 @@ tools = [
     arxiv_tool,
 ]
 
-# ----------------------------------
-# SESSION STATE
-# ----------------------------------
+# ------------------------------------------------
+# CHAT HISTORY
+# ------------------------------------------------
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {
             "role": "assistant",
-            "content": "Hi! I'm a chatbot that can search the web, Wikipedia, and Arxiv."
+            "content": (
+                "Hi! I'm a chatbot that can search "
+                "the web, Wikipedia and Arxiv."
+            ),
         }
     ]
 
-# ----------------------------------
-# DISPLAY CHAT HISTORY
-# ----------------------------------
+# Display previous messages
 
-for message in st.session_state.messages:
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
 
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
-
-# ----------------------------------
+# ------------------------------------------------
 # USER INPUT
-# ----------------------------------
+# ------------------------------------------------
 
-user_question = st.chat_input(
+user_prompt = st.chat_input(
     "Ask me anything..."
 )
 
-if user_question:
+if user_prompt:
 
     st.session_state.messages.append(
         {
             "role": "user",
-            "content": user_question
+            "content": user_prompt,
         }
     )
 
     with st.chat_message("user"):
-        st.write(user_question)
+        st.write(user_prompt)
 
     if not api_key:
+        st.error("Please enter Groq API Key")
+        st.stop()
 
-        st.error("Please enter your Groq API Key")
+    try:
 
-    else:
+        # ----------------------------------------
+        # LLM
+        # ----------------------------------------
 
         llm = ChatGroq(
-            model="llama3-8b-8192",
             groq_api_key=api_key,
+            model="llama-3.1-8b-instant"
         )
+
+        # ----------------------------------------
+        # AGENT
+        # ----------------------------------------
 
         agent = create_agent(
             model=llm,
             tools=tools,
             system_prompt="""
-            You are a helpful research assistant.
-            Use the available tools whenever needed.
-            Answer clearly and concisely.
+            You are a helpful AI research assistant.
+
+            Use:
+            - DuckDuckGo for web search
+            - Wikipedia for encyclopedia knowledge
+            - Arxiv for research papers
+
+            Provide concise and accurate responses.
             """
         )
 
         with st.chat_message("assistant"):
 
-            response = agent.invoke(
-                {
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": user_question
-                        }
-                    ]
-                }
-            )
+            with st.spinner("Thinking..."):
 
-            answer = response["messages"][-1].content
+                result = agent.invoke(
+                    {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": user_prompt
+                            }
+                        ]
+                    }
+                )
 
-            st.write(answer)
+                answer = result["messages"][-1].content
 
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": answer
-                }
-            )
+                st.write(answer)
+
+                st.session_state.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": answer,
+                    }
+                )
+
+    except Exception as e:
+
+        st.error("Error occurred")
+
+        st.exception(e)
