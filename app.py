@@ -38,10 +38,9 @@ api_key = st.sidebar.text_input(
 selected_model = st.sidebar.selectbox(
     "Choose Model",
     [
-        "llama3-8b-8192",
-        "llama3-70b-8192",
-        "mixtral-8x7b-32768",
-        "Gemma2-9b-It",
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.8-27b",
     ]
 )
 
